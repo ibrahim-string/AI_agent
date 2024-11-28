@@ -4,6 +4,9 @@ import argparse
 from langchain_community.llms import Ollama
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from colorama import Fore, init
+init(autoreset=True)
+
 llm = Ollama(model="codellama")
 
 chat_history = []
@@ -12,16 +15,16 @@ prompt_template = ChatPromptTemplate.from_messages(
     [
         (
             "system",
-            "You are a code generator named Ram Kishan and your job is only to take instructions and generate the output as code.",
+            "Your are John slave AI coder, Your job is to listen to your master jack and generate the best code with good comments.",
         ),
         MessagesPlaceholder(variable_name="chat_history"),
-        ("human", "{input}"),
+        # ("human", "{input}"),
     ]
 )
 
 chain = prompt_template | llm
 
-server_ip = '3.6.30.85' 
+server_ip = '0.tcp.in.ngrok.io' 
 # server_port = 11837    
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Run client with specified server port")
@@ -33,7 +36,8 @@ c = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 c.connect((server_ip,server_port))
 
 def send_msg(msg):
-    c.sendall(bytes(msg,'utf-8'))
+    msg_with_color = Fore.BLUE + msg
+    c.sendall(msg_with_color.encode('utf-8'))
 
 end_of_msg= "<END_OF_MSG>"
 
@@ -57,8 +61,10 @@ async def start_app():
         response_stream = chain.astream({"input": master_response, "chat_history": chat_history})
         chat_history.append(HumanMessage(content=master_response))
         response_text = ""
+        init(autoreset=True)
+
         async for r in response_stream:
-                print(r, end='',flush=True)
+                print(Fore.BLUE + r, end='',flush=True)
                 send_msg(msg=r)
                 response_text+=r
         send_msg(end_of_msg)
