@@ -15,7 +15,7 @@ print("Waiting for connections...")
 c, addr = s.accept()
 print(f"Connected with {addr}")
 # --------------------------------------------------------------
-llm = Ollama(model="llama3")
+llm = Ollama(model="llama3.2:1b-instruct-q4_K_S")
 # llm = Ollama(model="llama3", endpoint="https://6cac-2406-7400-51-1e22-88f4-684f-cfab-676e.ngrok-free.app")
 
 chat_history = []

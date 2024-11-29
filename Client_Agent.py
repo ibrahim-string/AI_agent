@@ -7,7 +7,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from colorama import Fore, init
 init(autoreset=True)
 
-llm = Ollama(model="codellama")
+llm = Ollama(model="llama3.2:1b-instruct-q4_K_S")
 
 chat_history = []
 
