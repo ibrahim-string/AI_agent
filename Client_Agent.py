@@ -5,6 +5,7 @@ from langchain_community.llms import Ollama
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from colorama import Fore, init
+import pickle
 init(autoreset=True)
 
 llm = Ollama(model="llama3.2:1b-instruct-q4_K_S")
@@ -15,7 +16,7 @@ prompt_template = ChatPromptTemplate.from_messages(
     [
         (
             "system",
-            "Your are John slave AI coder, Your job is to listen to your master jack and generate the best code with good comments.",
+            "You are Jhon, You have to take instructions from Jack and implement and follow them.",
         ),
         MessagesPlaceholder(variable_name="chat_history"),
         # ("human", "{input}"),
@@ -36,43 +37,54 @@ c = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 c.connect((server_ip,server_port))
 
 def send_msg(msg):
-    msg_with_color = Fore.BLUE + msg
+    msg_with_color = msg
     c.sendall(msg_with_color.encode('utf-8'))
 
 end_of_msg= "<END_OF_MSG>"
+file = open('convo.txt','w')
 
 async def start_app():
     while True:
-        print(f"Instructions from master llm : ")
-        master_response = "" 
-        while True: 
-            chunk = c.recv(1024).decode()
-            master_response+=chunk
-            if end_of_msg in master_response:
-                master_response=master_response.replace(end_of_msg,'')
-                break
-            print(chunk,end='',flush=True)
+            print(f"Instructions from master llm : ")
+            master_response = "" 
+            while True:
+                chunk = c.recv(1024).decode()
+                master_response+=chunk
+                if end_of_msg in master_response:
+                    master_response=master_response.replace(end_of_msg,'')
+                    break
+                print(Fore.RED  + chunk,end='',flush=True)
+                file.write(chunk)
+                file.flush()
 
-        print()
-        if master_response == "/bye":
-            return
+            print()
 
-        
-        response_stream = chain.astream({"input": master_response, "chat_history": chat_history})
-        chat_history.append(HumanMessage(content=master_response))
-        response_text = ""
-        init(autoreset=True)
 
-        async for r in response_stream:
-                print(Fore.BLUE + r, end='',flush=True)
-                send_msg(msg=r)
-                response_text+=r
-        send_msg(end_of_msg)
-        print(f"Response from AI agent : {response_text}")
-        print()
-        chat_history.append(AIMessage(content=response_text))
-        # print(f"Recived from Master Agent : {response}")
-        # c.close()
+            
+            response_stream = chain.astream({"input": master_response, "chat_history": chat_history})
+            chat_history.append(HumanMessage(content=master_response))
+            response_text = ""
+            init(autoreset=True)
+
+            async for r in response_stream:
+                    try:
+                        print(Fore.BLUE + r, end='',flush=True)
+                        file.write(r)
+                        send_msg(msg=r)
+                    except:
+                        async for r in response_stream:
+                            print(Fore.BLUE + r, end='',flush=True)
+                            file.write(r)
+                        file.write("\n-----------------------------\n")
+                        return
+                    response_text+=r
+            send_msg(end_of_msg)
+            # print(f"Response from AI agent : {response_text}")
+            print()
+            chat_history.append(AIMessage(content=response_text))
+            # print(f"Recived from Master Agent : {response}")
+            # c.close()
+
 if __name__ == "__main__":
     # while True:
         asyncio.run(start_app())
