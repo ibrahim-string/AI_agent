@@ -7,6 +7,10 @@ from colorama import Fore, init
 import aiohttp
 init(autoreset=True)
 
+# Constants
+end_of_msg = "<END_OF_MSG>"
+terminate = "<TERMINATE>"
+
 # Add argument parsing
 parser = argparse.ArgumentParser()
 parser.add_argument('--server_port', type=int, default=10941)
@@ -37,51 +41,63 @@ class MasterAI:
                     if line:
                         yield json.loads(line)
 
-# Socket setup
-s = socket.socket()
-s.bind(('0.0.0.0', args.server_port))
-print(f"Socket created on port {args.server_port}")
-print("Start ngrok with: ngrok tcp {args.server_port}")
-s.listen(3)
-print("Waiting for connections...")
-
-c, addr = s.accept()
-print(f"Connected with {addr}")
-
-def send_msg(msg):
-    c.sendall(msg.encode('utf-8'))
-
-end_of_msg = "<END_OF_MSG>"
-terminate = "<TERMINATE>"
-
-async def start_app():
+async def handle_client(reader, writer):
+    print(f"Connected with {writer.get_extra_info('peername')}")
     master = MasterAI()
     current_topic = input("Enter the topic to discuss: ")
     
-    while True:
-        # Generate and send Master's instruction
-        async for response in master.generate(current_topic):
-            response_json = json.loads(response)
-            if 'response' in response_json:
-                text = response_json['response']
-                if not text.startswith("Slave:"):
-                    print(Fore.RED + text, end='', flush=True)
-                    send_msg(text)
-        send_msg(end_of_msg)
-        print()
-        
-        # Wait for Slave's response
-        print("Waiting for Slave response...")
-        slave_response = ""
+    try:
         while True:
-            chunk = c.recv(1024).decode()
-            if end_of_msg in chunk:
-                slave_response = slave_response.replace(end_of_msg, '')
-                break
-            slave_response += chunk
-            print(Fore.BLUE + chunk, end='', flush=True)
-        
-        master.chat_history.append({"role": "assistant", "content": slave_response})
+            # Generate and send Master's instruction
+            async for response in master.generate(current_topic):
+                if 'response' in response:
+                    text = response['response']
+                    if not text.startswith("Slave:"):
+                        print(Fore.RED + text, end='', flush=True)
+                        writer.write(text.encode('utf-8'))
+                        await writer.drain()
+            
+            writer.write(end_of_msg.encode('utf-8'))
+            await writer.drain()
+            print()
+            
+            # Wait for Slave's response
+            print("Waiting for Slave response...")
+            slave_response = ""
+            while True:
+                chunk = await reader.read(1024)
+                if not chunk:
+                    return  # Client disconnected
+                
+                chunk = chunk.decode()
+                if end_of_msg in chunk:
+                    slave_response = slave_response.replace(end_of_msg, '')
+                    break
+                slave_response += chunk
+                print(Fore.BLUE + chunk, end='', flush=True)
+            
+            master.chat_history.append({"role": "assistant", "content": slave_response})
+    
+    except Exception as e:
+        print(f"Error handling client: {e}")
+    finally:
+        writer.close()
+        await writer.wait_closed()
+
+async def start_server():
+    server = await asyncio.start_server(
+        handle_client, '0.0.0.0', args.server_port
+    )
+    
+    addr = server.sockets[0].getsockname()
+    print(f'Server running on {addr}')
+    print(f"Start ngrok with: ngrok tcp {args.server_port}")
+    
+    async with server:
+        await server.serve_forever()
 
 if __name__ == "__main__":
-    asyncio.run(start_app())
+    try:
+        asyncio.run(start_server())
+    except KeyboardInterrupt:
+        print("\nShutting down server...")
