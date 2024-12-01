@@ -42,12 +42,17 @@ class MasterAI:
                         yield json.loads(line)
 
 async def handle_client(reader, writer):
-    print(f"Connected with {writer.get_extra_info('peername')}")
+    client_addr = writer.get_extra_info('peername')
+    print(f"\n[+] New client connected from {client_addr}")
     master = MasterAI()
-    current_topic = input("Enter the topic to discuss: ")
+    
+    print("\n[*] Enter the topic to discuss (or press Ctrl+C to exit):")
+    current_topic = input("> ")
+    print(f"\n[*] Starting conversation about: {current_topic}")
     
     try:
         while True:
+            print("\n[*] Generating Master's instruction...")
             # Generate and send Master's instruction
             async for response in master.generate(current_topic):
                 if 'response' in response:
@@ -57,17 +62,18 @@ async def handle_client(reader, writer):
                         writer.write(text.encode('utf-8'))
                         await writer.drain()
             
+            print("\n[*] Sending end of message marker...")
             writer.write(end_of_msg.encode('utf-8'))
             await writer.drain()
-            print()
             
             # Wait for Slave's response
-            print("Waiting for Slave response...")
+            print("\n[*] Waiting for Slave response...")
             slave_response = ""
             while True:
                 chunk = await reader.read(1024)
                 if not chunk:
-                    return  # Client disconnected
+                    print(f"\n[-] Client {client_addr} disconnected")
+                    return
                 
                 chunk = chunk.decode()
                 if end_of_msg in chunk:
@@ -76,11 +82,13 @@ async def handle_client(reader, writer):
                 slave_response += chunk
                 print(Fore.BLUE + chunk, end='', flush=True)
             
+            print("\n[+] Received complete response from Slave")
             master.chat_history.append({"role": "assistant", "content": slave_response})
     
     except Exception as e:
-        print(f"Error handling client: {e}")
+        print(f"\n[-] Error handling client {client_addr}: {e}")
     finally:
+        print(f"\n[-] Closing connection with {client_addr}")
         writer.close()
         await writer.wait_closed()
 
@@ -90,8 +98,10 @@ async def start_server():
     )
     
     addr = server.sockets[0].getsockname()
-    print(f'Server running on {addr}')
-    print(f"Start ngrok with: ngrok tcp {args.server_port}")
+    print(f'\n[+] Server started successfully')
+    print(f'[+] Listening on {addr}')
+    print(f'[*] To make server public, run: ngrok tcp {args.server_port}')
+    print('\n[*] Waiting for client connections... Press Ctrl+C to exit\n')
     
     async with server:
         await server.serve_forever()

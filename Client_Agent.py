@@ -31,7 +31,7 @@ class SlaveAI:
 # Socket setup
 s = socket.socket()
 host = '0.tcp.in.ngrok.io'
-port = 10941
+port = 19105
 
 print(f"Connecting to {host}:{port}...")
 s.connect((host, port))
