@@ -7,23 +7,23 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from colorama import Fore, init
 import pickle
 init(autoreset=True)
+def llm_init():
 
-llm = Ollama(model="llama3.2:1b-instruct-q4_K_S")
+    llm = Ollama(model="llama3.2:1b-instruct-q4_K_S")
 
-chat_history = []
 
-prompt_template = ChatPromptTemplate.from_messages(
-    [
-        (
-            "system",
-            "You are Jhon, You have to take instructions from Jack and implement and follow them.",
-        ),
-        MessagesPlaceholder(variable_name="chat_history"),
-        # ("human", "{input}"),
-    ]
-)
-
-chain = prompt_template | llm
+    prompt_template = ChatPromptTemplate.from_messages(
+        [
+            (
+                "system",
+                "You are Jhon. You have to take instructions from Jack and implement or generate code if necessary or generate content if necessary.",
+            ),
+            MessagesPlaceholder(variable_name="chat_history"),
+            # ("human", "{input}"),
+        ]
+    )
+    return prompt_template | llm
+chain = llm_init()
 
 server_ip = '0.tcp.in.ngrok.io' 
 # server_port = 11837    
@@ -42,20 +42,29 @@ def send_msg(msg):
 
 end_of_msg= "<END_OF_MSG>"
 file = open('convo.txt','w')
-
+terminate = "<TERMINATE>"
 async def start_app():
+    global chain
+    chat_history = []
     while True:
             print(f"Instructions from master llm : ")
             master_response = "" 
             while True:
                 chunk = c.recv(1024).decode()
-                master_response+=chunk
-                if end_of_msg in master_response:
-                    master_response=master_response.replace(end_of_msg,'')
+                if terminate in chunk:
+                    chain = llm_init()
+                    file.write("\n-----------------------------------------------------------\n")
+                    chat_history = []
                     break
-                print(Fore.RED  + chunk,end='',flush=True)
-                file.write(chunk)
-                file.flush()
+                else:
+                    master_response+=chunk
+                    if end_of_msg in master_response:
+                        master_response=master_response.replace(end_of_msg,'')
+                        break
+                    print(Fore.RED  + chunk,end='',flush=True)
+                    file.write(chunk)
+                    file.flush()
+
 
             print()
 
@@ -75,7 +84,7 @@ async def start_app():
                         async for r in response_stream:
                             print(Fore.BLUE + r, end='',flush=True)
                             file.write(r)
-                        file.write("\n-----------------------------\n")
+                        
                         return
                     response_text+=r
             send_msg(end_of_msg)

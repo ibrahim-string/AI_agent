@@ -17,31 +17,36 @@ print("Waiting for connections...")
 c, addr = s.accept()
 print(f"Connected with {addr}")
 # --------------------------------------------------------------
-llm = Ollama(model="llama3.2:1b-instruct-q4_K_S")
-# llm = Ollama(model="llama3", endpoint="https://6cac-2406-7400-51-1e22-88f4-684f-cfab-676e.ngrok-free.app")
+def llm_init():
+    llm = Ollama(model="llama3.2:1b-instruct-q4_K_S")
+    # llm = Ollama(model="llama3", endpoint="https://6cac-2406-7400-51-1e22-88f4-684f-cfab-676e.ngrok-free.app")
 
-chat_history = []
-prompt = '''You are Jack master AI agent, your job is only to give instructions to your slave AI agent John.'''
-prompt_template = ChatPromptTemplate.from_messages(
-    [
-        (
-            "system",
-            prompt,
-        ),
-        MessagesPlaceholder(variable_name="chat_history"),
-        # ("human", "{input}"),
-    ]
-)
-
-chain = prompt_template | llm
+    prompt = '''You are Jack master AI agent, your job is only to give instructions to your slave AI agent John.'''
+    prompt_template = ChatPromptTemplate.from_messages(
+        [
+            (
+                "system",
+                prompt,
+            ),
+            MessagesPlaceholder(variable_name="chat_history"),
+            # ("human", "{input}"),
+        ]
+    )
+    return prompt_template | llm
+file = open('convo.txt','w')
+chain = llm_init()
 with open("topics.pkl", "rb") as file:
     loaded_topics = pickle.load(file)
 def send_msg(msg):
     msg_with_color = msg
     c.sendall(msg_with_color.encode('utf-8'))
 end_of_msg= "<END_OF_MSG>"
+terminate = "<TERMINATE>"
 async def start_app():
+    global chain
+    chat_history = []
     for category, topics_list in loaded_topics.items():
+        start_time = time.time()
         for topic in topics_list:
 
             question = f'''
@@ -57,7 +62,6 @@ async def start_app():
                             Begin the dialogue now.
                         '''
             count=0
-            start_time = time.time()
             while True:
                 if count==0:
                     if question.lower() == "/bye":
@@ -103,9 +107,15 @@ async def start_app():
                     print()  
                     chat_history.append(AIMessage(content=response_text))
                 count= count+ 1
-                if time.time() - start_time > 10:
-                    c.close()
-                    return
+                if time.time() - start_time > 4:
+                    # c.close()
+                    send_msg(msg=terminate)
+                    print(Fore.YELLOW + "Time exceeded 60 seconds reinitializing llm...")
+                    chain = llm_init()
+                    chat_history = []
+                    start_time = time.time()
+                    
+                    break
 
 if __name__ == "__main__":
     # while True:
