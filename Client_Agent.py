@@ -9,11 +9,13 @@ init(autoreset=True)
 
 def llm_init():
     llm = Ollama(model="llama3.2:1b-instruct-q4_K_S")
-    prompt = '''You are the Slave AI. Your role is to execute the Master's instructions precisely.
-    Always start with "Slave:" followed by the execution of the given instruction.
-    Never give instructions.
-    Never act as the Master.
-    Simply execute what is commanded.'''
+    prompt = '''You are the Slave AI. Your role is to ONLY respond to the Master's instructions.
+    NEVER give instructions.
+    NEVER start with "Master:".
+    NEVER evaluate other responses.
+    ALWAYS start with "Slave:" followed by your direct response to the Master's instruction.
+    
+    Stay focused on answering exactly what is asked.'''
     
     prompt_template = ChatPromptTemplate.from_messages([
         SystemMessage(content=prompt),
@@ -47,7 +49,9 @@ def send_msg(msg):
     c.sendall(msg_with_color.encode('utf-8'))
 
 async def start_app():
+    global chain
     chat_history = []
+    chain = llm_init()
     
     while True:
         # Receive Master's instruction
@@ -74,9 +78,11 @@ async def start_app():
         slave_response = ""
         
         async for r in response_stream:
-            print(Fore.BLUE + r, end='', flush=True)
-            send_msg(msg=r)
-            slave_response += r
+            if not r.startswith("Master:"):  # Prevent any Master responses
+                response_text = f"Slave: {r}" if not r.startswith("Slave:") else r
+                print(Fore.BLUE + response_text, end='', flush=True)
+                send_msg(msg=response_text)
+                slave_response += response_text
                 
         # Add Slave's response to chat history
         chat_history.append(HumanMessage(content=slave_response))
