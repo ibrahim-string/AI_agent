@@ -29,7 +29,7 @@ def llm_init():
     #             prompt,
     #         ),
     #         MessagesPlaceholder(variable_name="chat_history"),
-    #         # ("human", "{input}"),
+    #         # ("Master", "{input}"),
     #     ]
     # )
     prompt_template = ChatPromptTemplate.from_messages(
@@ -37,9 +37,6 @@ def llm_init():
             SystemMessage(content=prompt),
         ]
     )
-
-
-    
     return prompt_template | llm
 file = open('convo.txt','w')
 

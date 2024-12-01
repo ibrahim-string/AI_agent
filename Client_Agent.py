@@ -10,7 +10,7 @@ init(autoreset=True)
 def llm_init():
 
     llm = Ollama(model="llama3.2:1b-instruct-q4_K_S")
-    question = "You are Jhon. You have to take instructions from Jack and implement or generate code if necessary or generate content if necessary."
+    question = "You are John. You have to take instructions from Jack who is your master and implement or generate code if necessary or generate content if necessary."
 
     prompt_template = ChatPromptTemplate.from_messages(
     [
