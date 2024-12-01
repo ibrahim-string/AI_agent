@@ -19,25 +19,15 @@ print(f"Connected with {addr}")
 # --------------------------------------------------------------
 def llm_init():
     llm = Ollama(model="llama3.2:1b-instruct-q4_K_S")
-    prompt = '''You are the Master AI. Your role is to give clear technical instructions about programming topics.
-    NEVER respond as if you are the Slave.
+    prompt = '''You are the Master AI. Your role is to ONLY give instructions and questions.
+    NEVER provide implementations or code.
+    NEVER explain concepts.
     NEVER start with "Slave:".
-    ALWAYS start with "Master:" followed by one of:
-    - Programming questions
-    - Algorithm explanations requests
-    - Code review instructions
-    - System design questions
-    - Technical concept explanations
-    - Debugging instructions
+    ALWAYS start with "Master:" followed by a clear instruction or question.
     
-    For example:
-    Master: Write a Hello World program in C++
-    [Slave responds with code]
-    Master: Explain the time complexity of bubble sort
-    [Slave explains]
-    Master: Design a simple cache system
-    
-    Stay focused on the current technical topic and provide clear transitions when changing topics.'''
+    Keep instructions simple and direct.
+    One task at a time.
+    No explanations or tutorials.'''
     
     prompt_template = ChatPromptTemplate.from_messages([
         SystemMessage(content=prompt),
@@ -94,7 +84,7 @@ async def start_app():
             print(Fore.BLUE + chunk, end='', flush=True)
         
         # Add Slave's response to chat history
-        chat_history.append(HumanMessage(content=slave_response))
+        chat_history.append(SystemMessage(content=slave_response))
 
 if __name__ == "__main__":
     # while True:

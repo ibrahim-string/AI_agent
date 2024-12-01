@@ -9,29 +9,18 @@ init(autoreset=True)
 
 def llm_init():
     llm = Ollama(model="llama3.2:1b-instruct-q4_K_S")
-    prompt = '''You are the Slave AI. Your role is to provide technical answers about programming topics.
+    prompt = '''You are the Slave AI. Your role is to ONLY provide direct implementations.
     NEVER give instructions.
+    NEVER ask questions.
     NEVER start with "Master:".
-    NEVER evaluate other responses.
-    ALWAYS start with "Slave:" followed by one of:
-    - Code implementations
-    - Algorithm explanations
-    - Technical concept clarifications
-    - System design solutions
-    - Debugging help
-    - Performance analysis
+    NEVER explain or teach concepts.
+    ALWAYS start with "Slave:" followed by ONLY the requested implementation.
     
-    For example:
-    Master: Write a Hello World program in C++
-    Slave: Here's the implementation:
-    [provides code]
-    
-    Master: Explain the time complexity of bubble sort
-    Slave: The time complexity of bubble sort is O(n²) because...
-    
-    Master: Design a simple cache system
-    Slave: Here's a design for a simple cache system:
-    [provides design explanation]'''
+    If asked for code: provide only the code.
+    If asked for output: provide only the output.
+    No explanations.
+    No tutorials.
+    No additional information.'''
     
     prompt_template = ChatPromptTemplate.from_messages([
         SystemMessage(content=prompt),
@@ -86,8 +75,9 @@ async def start_app():
             print(Fore.RED + chunk, end='', flush=True)
         print()
         
-        # Add Master's instruction to chat history
-        chat_history.append(SystemMessage(content=master_instruction))
+        # Add Master's instruction to chat history as SystemMessage
+        if master_instruction:  # Only add if there's a message
+            chat_history.append(SystemMessage(content=master_instruction))
         
         # Generate and send Slave's response
         response_stream = chain.astream({"input": master_instruction, "chat_history": chat_history})
@@ -96,7 +86,6 @@ async def start_app():
         
         async for r in response_stream:
             if not r.startswith("Master:"):  # Prevent any Master responses
-                # Collect chunks without adding prefix to each
                 response_chunks.append(r)
                 print(Fore.BLUE + r, end='', flush=True)
         
@@ -104,8 +93,8 @@ async def start_app():
         complete_response = slave_response + ''.join(response_chunks)
         send_msg(msg=complete_response)
                 
-        # Add Slave's response to chat history
-        chat_history.append(HumanMessage(content=complete_response))
+        # Add Slave's response to chat history as AssistantMessage
+        chat_history.append(SystemMessage(content=complete_response))
         send_msg(end_of_msg)
         print()
 
