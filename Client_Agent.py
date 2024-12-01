@@ -11,16 +11,14 @@ def llm_init():
 
     llm = Ollama(model="llama3.2:1b-instruct-q4_K_S")
     prompt = '''You are the Slave AI. Your role is to execute the Master's instructions precisely.
-    Always start with "Slave:" followed by the direct execution of the given instruction.
-    Reference your previous answers when providing new information.
-    Build upon previous explanations for continuity.
-    Stay focused only on the specific instruction given.
+    Always start with "Slave:" followed by the execution of the given instruction.
+    Never give instructions.
+    Never act as the Master.
+    Simply execute what is commanded.
     
     For example:
-    Master: Explain the basic structure of a linked list node.
-    Slave: A linked list node contains data and a next pointer.
-    Master: Explain how to connect two nodes.
-    Slave: Using the next pointer I previously described, we can connect two nodes by setting the first node's next pointer to point to the second node.'''
+    [Receive Master's instruction about linked list node structure]
+    Slave: A linked list node contains two parts: data and a pointer to the next node. The data holds the value stored in the node, while the pointer contains the memory address of the next node in the sequence.'''
 
     prompt_template = ChatPromptTemplate.from_messages(
     [
@@ -54,52 +52,37 @@ async def start_app():
     global chain
     chat_history = []
     while True:
-            print(f"Instructions from master llm : ")
-            master_response = "" 
-            while True:
-                chunk = c.recv(1024).decode()
-                if terminate in chunk:
-                    chain = llm_init()
-                    file.write("\n-----------------------------------------------------------\n")
-                    chat_history = []
-                    break
-                else:
-                    master_response+=chunk
-                    if end_of_msg in master_response:
-                        master_response=master_response.replace(end_of_msg,'')
-                        break
-                    print(Fore.RED  + chunk,end='',flush=True)
-                    file.write(chunk)
-                    file.flush()
-
-
-            print()
-
-
-            
-            response_stream = chain.astream({"input": master_response, "chat_history": chat_history})
-            chat_history.append(SystemMessage(content=master_response))
-            response_text = ""
-            init(autoreset=True)
-
-            async for r in response_stream:
-                    try:
-                        print(Fore.BLUE + r, end='',flush=True)
-                        file.write(r)
-                        send_msg(msg=r)
-                    except:
-                        async for r in response_stream:
-                            print(Fore.BLUE + r, end='',flush=True)
-                            file.write(r)
-                        
-                        return
-                    response_text+=r
-            send_msg(end_of_msg)
-            # print(f"Response from AI agent : {response_text}")
-            print()
-            chat_history.append(HumanMessage(content=response_text))
-            # print(f"Recived from Master Agent : {response}")
-            # c.close()
+        print(f"Receiving Master's instruction: ")
+        master_instruction = "" 
+        while True:
+            chunk = c.recv(1024).decode()
+            if terminate in chunk:
+                chain = llm_init()
+                chat_history = []
+                break
+            master_instruction += chunk
+            if end_of_msg in master_instruction:
+                master_instruction = master_instruction.replace(end_of_msg, '')
+                break
+            print(Fore.RED + chunk, end='', flush=True)
+        print()
+        
+        # Add Master's instruction to chat history
+        chat_history.append(SystemMessage(content=master_instruction))
+        
+        # Generate and send Slave's response
+        response_stream = chain.astream({"input": master_instruction, "chat_history": chat_history})
+        slave_response = ""
+        
+        async for r in response_stream:
+            print(Fore.BLUE + r, end='', flush=True)
+            send_msg(msg=r)
+            slave_response += r
+                
+        # Add Slave's response to chat history
+        chat_history.append(HumanMessage(content=slave_response))
+        send_msg(end_of_msg)
+        print()
 
 if __name__ == "__main__":
     # while True:

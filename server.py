@@ -23,13 +23,15 @@ def llm_init():
     Always start with "Master:" followed by a specific instruction or task.
     Stay focused on the current topic only.
     Give step-by-step instructions related to the topic.
-    Reference previous responses when giving new instructions.
-    Build upon the Slave's previous answers.
+    Do not respond as the Slave.
+    Do not ask questions - only give instructions.
     
     For example:
     Master: Explain the basic structure of a linked list node.
-    Slave: [Previous response about node structure]
-    Master: Based on the node structure you described, explain how to connect two nodes together.'''
+    [Wait for Slave response]
+    Master: Now implement the node structure in C code.
+    [Wait for Slave response]
+    Master: Add a function to create a new node.'''
     
     prompt_template = ChatPromptTemplate.from_messages([
         SystemMessage(content=prompt),
@@ -49,121 +51,36 @@ terminate = "<TERMINATE>"
 async def start_app():
     global chain
     chat_history = []
-    # for category, topics_list in loaded_topics.items():
-    start_time = time.time()
-        # for topic in topics_list:
-
-    # question = f'''
-    #             You are a Master LLM collaborating with a Slave LLM. Your task is to engage in a structured conversation on the topic: **{topic}**. 
-
-    #                 Guidelines:
-    #                 1. Begin by briefly introducing the topic.
-    #                 2. Share perspectives, insights, or questions to explore the topic in depth.
-    #                 3. Challenge each other's ideas with logical or creative extensions.
-    #                 4. Collaborate to provide actionable insights, recommendations, or conclusions.
-    #                 5. Avoid hallucinations or incorrect information.
-
-    #                 Begin the dialogue now.
-    #             '''
-    question = input("Enter your question: ")
-    count=0
-    chain = llm_init()
+    
     while True:
-        if count==0:
-            if question.lower() == "/bye":
-                return
-
-            response_stream = chain.astream({"input": question, "chat_history": chat_history})
-            chat_history.append(HumanMessage(content=question))
-            response_text = ""
-            async for response in response_stream:
-                print(Fore.RED + response, end='',flush=True)
-                send_msg(msg=response)
-                response_text += response
-                send_msg(end_of_msg)
-                print()
-                chat_history.append(SystemMessage(content=response_text))
-                print(f"AI agent llm: ")
-                agent_response = ""
-                while True:
-                    # print("*",end='')
-                    chunk = c.recv(1024).decode()
-                    agent_response += chunk
-                    print(Fore.BLUE + chunk, end='', flush=True)
-                    if end_of_msg in agent_response:
-                        agent_response = agent_response.replace(end_of_msg, '')
-                        break
-
-                    print()
-                    print('-------------------------------------------------')
-                    
-                    response_stream = chain.astream({"input": agent_response, "chat_history": chat_history})
-                    chat_history.append(HumanMessage(content=question))
-
-                    response_text = ""
-
-                    async for response in response_stream:
-                        print(Fore.RED + response, end='',flush=True)
-                        send_msg(msg=response)
-                        response_text += response
-                    send_msg(end_of_msg)
-                    print()  
-                    chat_history.append(HumanMessage(content=response_text))
-                count= count+ 1
-                if count >= 3:  # You can adjust this number
-                    # Send concluding instruction
-                    conclusion_prompt = '''Master: Provide a final conclusion about our discussion on this topic. This will end our current conversation.'''
-                    
-                    response_stream = chain.astream({"input": conclusion_prompt, "chat_history": chat_history})
-                    response_text = ""
-                    async for response in response_stream:
-                        print(Fore.RED + response, end='', flush=True)
-                        send_msg(msg=response)
-                        response_text += response
-                    send_msg(end_of_msg)
-                    
-                    # Send termination signal
-                    send_msg(msg=terminate)
-                    print(Fore.YELLOW + "\nConversation concluded. Moving to next topic...")
-                    chain = llm_init()
-                    chat_history = []
-                    break
-                
-                # Your existing time-based termination
-                if time.time() - start_time > 60:
-                    send_msg(msg=terminate)
-                    print(Fore.YELLOW + "Time exceeded 180 seconds, reinitializing llm...")
-                    chain = llm_init()
-                    chat_history = []
-                    start_time = time.time()
-                    break
-                print(Fore.BLUE + chunk,end='',flush=True)
-
-            print()
-            print('-------------------------------------------------')
-            
-            response_stream = chain.astream({"input": agent_response, "chat_history": chat_history})
-            chat_history.append(HumanMessage(content=question))
-
-            response_text = ""
-
-            async for response in response_stream:
-                print(Fore.RED + response, end='',flush=True)
-                send_msg(msg=response)
-                response_text += response
-            send_msg(end_of_msg)
-            print()  
-            chat_history.append(HumanMessage(content=response_text))
-        count= count+ 1
-        if time.time() - start_time > 180:
-            # c.close()
-            send_msg(msg=terminate)
-            print(Fore.YELLOW + "Time exceeded 60 seconds reinitializing llm...")
-            chain = llm_init()
-            chat_history = []
-            start_time = time.time()
-            
-            break
+        # Generate and send Master's instruction
+        response_stream = chain.astream({"input": question, "chat_history": chat_history})
+        master_instruction = ""
+        
+        async for response in response_stream:
+            print(Fore.RED + response, end='', flush=True)
+            send_msg(msg=response)
+            master_instruction += response
+        send_msg(end_of_msg)
+        print()
+        
+        # Add Master's instruction to chat history
+        chat_history.append(SystemMessage(content=master_instruction))
+        
+        # Wait for Slave's response
+        print(f"Waiting for Slave response: ")
+        slave_response = ""
+        while True:
+            chunk = c.recv(1024).decode()
+            if end_of_msg in chunk:
+                slave_response = slave_response.replace(end_of_msg, '')
+                break
+            slave_response += chunk
+            print(Fore.BLUE + chunk, end='', flush=True)
+        
+        # Add Slave's response to chat history
+        chat_history.append(HumanMessage(content=slave_response))
+        print()
 
 if __name__ == "__main__":
     # while True:
