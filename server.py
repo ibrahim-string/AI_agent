@@ -46,11 +46,13 @@ async def handle_client(reader, writer):
     print(f"\n[+] New client connected from {client_addr}")
     master = MasterAI()
     
-    print("\n[*] Enter the topic to discuss (or press Ctrl+C to exit):")
-    current_topic = input("> ")
-    print(f"\n[*] Starting conversation about: {current_topic}")
-    
     try:
+        print("\n" + "="*50)
+        print("[*] Enter the topic to discuss (or press Ctrl+C to exit):")
+        print("="*50)
+        current_topic = input(Fore.GREEN + "> " + Fore.RESET)
+        print(f"\n[*] Starting conversation about: {Fore.YELLOW}{current_topic}{Fore.RESET}")
+        
         while True:
             print("\n[*] Generating Master's instruction...")
             # Generate and send Master's instruction
