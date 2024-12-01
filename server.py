@@ -2,8 +2,15 @@ import asyncio
 import socket
 import json
 import requests
+import argparse
 from colorama import Fore, init
+import aiohttp
 init(autoreset=True)
+
+# Add argument parsing
+parser = argparse.ArgumentParser()
+parser.add_argument('--server_port', type=int, default=10941)
+args = parser.parse_args()
 
 class MasterAI:
     def __init__(self):
@@ -24,13 +31,17 @@ class MasterAI:
             "stream": True
         }
         
-        response = requests.post(self.url, json=data, headers=self.headers, stream=True)
-        return response.iter_lines()
+        async with aiohttp.ClientSession() as session:
+            async with session.post(self.url, json=data, headers=self.headers) as response:
+                async for line in response.content:
+                    if line:
+                        yield json.loads(line)
 
 # Socket setup
 s = socket.socket()
-s.bind(('0.0.0.0', 5050))
-print("Socket created")
+s.bind(('0.0.0.0', args.server_port))
+print(f"Socket created on port {args.server_port}")
+print("Start ngrok with: ngrok tcp {args.server_port}")
 s.listen(3)
 print("Waiting for connections...")
 

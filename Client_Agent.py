@@ -30,7 +30,7 @@ class SlaveAI:
 
 # Socket setup
 s = socket.socket()
-host = 'localhost'
+host = '0.tcp.in.ngrok.io'
 port = 10941
 
 print(f"Connecting to {host}:{port}...")
@@ -77,4 +77,7 @@ if __name__ == "__main__":
         asyncio.run(start_app())
     except KeyboardInterrupt:
         print("\nClosing connection...")
+        s.close()
+    except socket.gaierror:
+        print("\nError: Could not connect to ngrok. Make sure the host and port are correct.")
         s.close()
