@@ -44,14 +44,23 @@ def send_msg(msg):
     c.sendall(msg_with_color.encode('utf-8'))
 end_of_msg= "<END_OF_MSG>"
 terminate = "<TERMINATE>"
+MAX_TURNS = 5  # Set maximum conversation turns
+
 async def start_app():
     global chain
     chat_history = []
+    turns = 0  # Add turn counter
     
     current_topic = input("Enter the topic to discuss: ")
     chain = llm_init()
     
     while True:
+        # Check if max turns reached
+        if turns >= MAX_TURNS:
+            print(Fore.YELLOW + "\nReached maximum conversation turns. Terminating...")
+            send_msg(terminate)
+            break
+            
         # Generate Master's instruction
         master_prompt = f"Give a clear instruction about: {current_topic}"
         response_stream = chain.astream({
@@ -85,7 +94,19 @@ async def start_app():
         
         # Add Slave's response to chat history
         chat_history.append(SystemMessage(content=slave_response))
+        
+        # Add to turn counter after each full exchange
+        turns += 1
+        
+        # Check if slave sent terminate signal
+        if terminate in slave_response:
+            print(Fore.YELLOW + "\nSlave requested termination. Ending conversation...")
+            break
 
 if __name__ == "__main__":
-    # while True:
+    try:
         asyncio.run(start_app())
+    finally:
+        print("Closing connection...")
+        c.close()
+        s.close()
