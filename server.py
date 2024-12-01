@@ -42,11 +42,12 @@ class MasterAI:
                         yield json.loads(line)
 
 async def handle_client(reader, writer):
-    client_addr = writer.get_extra_info('peername')
-    print(f"\n[+] New client connected from {client_addr}")
-    master = MasterAI()
-    
+    print("\n[+] Starting handle_client function")
     try:
+        client_addr = writer.get_extra_info('peername')
+        print(f"\n[+] New client connected from {client_addr}")
+        master = MasterAI()
+        
         print("\n" + "="*50)
         print("[*] Enter the topic to discuss (or press Ctrl+C to exit):")
         print("="*50)
@@ -88,13 +89,17 @@ async def handle_client(reader, writer):
             master.chat_history.append({"role": "assistant", "content": slave_response})
     
     except Exception as e:
-        print(f"\n[-] Error handling client {client_addr}: {e}")
+        print(f"\n[-] Error in handle_client: {str(e)}")
+        print(f"Error type: {type(e)}")
+        import traceback
+        print(traceback.format_exc())
     finally:
-        print(f"\n[-] Closing connection with {client_addr}")
+        print("\n[-] Closing connection")
         writer.close()
         await writer.wait_closed()
 
 async def start_server():
+    print("\n[*] Starting server function")
     server = await asyncio.start_server(
         handle_client, '0.0.0.0', args.server_port
     )
@@ -110,6 +115,9 @@ async def start_server():
 
 if __name__ == "__main__":
     try:
+        print("[*] Starting main")
         asyncio.run(start_server())
     except KeyboardInterrupt:
         print("\nShutting down server...")
+    except Exception as e:
+        print(f"Error in main: {str(e)}")
