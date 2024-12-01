@@ -2,7 +2,7 @@ import socket
 import asyncio
 import argparse
 from langchain_community.llms import Ollama
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from colorama import Fore, init
 import pickle
@@ -10,17 +10,12 @@ init(autoreset=True)
 def llm_init():
 
     llm = Ollama(model="llama3.2:1b-instruct-q4_K_S")
-
+    question = "You are Jhon. You have to take instructions from Jack and implement or generate code if necessary or generate content if necessary."
 
     prompt_template = ChatPromptTemplate.from_messages(
-        [
-            (
-                "system",
-                "You are Jhon. You have to take instructions from Jack and implement or generate code if necessary or generate content if necessary.",
-            ),
-            MessagesPlaceholder(variable_name="chat_history"),
-            # ("human", "{input}"),
-        ]
+    [
+        SystemMessage(content=question),
+    ]
     )
     return prompt_template | llm
 chain = llm_init()
@@ -71,7 +66,7 @@ async def start_app():
 
             
             response_stream = chain.astream({"input": master_response, "chat_history": chat_history})
-            chat_history.append(HumanMessage(content=master_response))
+            chat_history.append(SystemMessage(content=master_response))
             response_text = ""
             init(autoreset=True)
 
@@ -90,7 +85,7 @@ async def start_app():
             send_msg(end_of_msg)
             # print(f"Response from AI agent : {response_text}")
             print()
-            chat_history.append(AIMessage(content=response_text))
+            chat_history.append(HumanMessage(content=response_text))
             # print(f"Recived from Master Agent : {response}")
             # c.close()
 

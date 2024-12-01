@@ -1,6 +1,6 @@
 import asyncio
 from langchain_community.llms import Ollama
-from langchain_core.messages import HumanMessage, AIMessage 
+from langchain_core.messages import HumanMessage, SystemMessage 
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from colorama import Fore, init
 import socket
@@ -22,19 +22,24 @@ def llm_init():
     # llm = Ollama(model="llama3", endpoint="https://6cac-2406-7400-51-1e22-88f4-684f-cfab-676e.ngrok-free.app")
 
     prompt = '''You are Jack master AI agent, your job is only to give instructions to your slave AI agent John.'''
+    # prompt_template = ChatPromptTemplate.from_messages(
+    #     [
+    #         (
+    #             "system",
+    #             prompt,
+    #         ),
+    #         MessagesPlaceholder(variable_name="chat_history"),
+    #         # ("human", "{input}"),
+    #     ]
+    # )
     prompt_template = ChatPromptTemplate.from_messages(
         [
-            (
-                "system",
-                prompt,
-            ),
-            MessagesPlaceholder(variable_name="chat_history"),
-            # ("human", "{input}"),
+            SystemMessage(content=prompt),
         ]
     )
     return prompt_template | llm
 file = open('convo.txt','w')
-chain = llm_init()
+
 with open("topics.pkl", "rb") as file:
     loaded_topics = pickle.load(file)
 def send_msg(msg):
@@ -62,6 +67,7 @@ async def start_app():
                             Begin the dialogue now.
                         '''
             count=0
+            chain = llm_init()
             while True:
                 if count==0:
                     if question.lower() == "/bye":
@@ -77,7 +83,7 @@ async def start_app():
                         response_text += response
                     send_msg(end_of_msg)
                     print()  
-                    chat_history.append(AIMessage(content=response_text))
+                    chat_history.append(SystemMessage(content=response_text))
                 else: 
                     # data = c.recv(1024).decode()
                     print(f"AI agent llm: ")
@@ -105,9 +111,9 @@ async def start_app():
                         response_text += response
                     send_msg(end_of_msg)
                     print()  
-                    chat_history.append(AIMessage(content=response_text))
+                    chat_history.append(HumanMessage(content=response_text))
                 count= count+ 1
-                if time.time() - start_time > 4:
+                if time.time() - start_time > 180:
                     # c.close()
                     send_msg(msg=terminate)
                     print(Fore.YELLOW + "Time exceeded 60 seconds reinitializing llm...")
