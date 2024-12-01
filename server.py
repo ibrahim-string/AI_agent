@@ -21,8 +21,9 @@ def llm_init():
     llm = Ollama(model="llama3.2:1b-instruct-q4_K_S")
     # llm = Ollama(model="llama3", endpoint="https://6cac-2406-7400-51-1e22-88f4-684f-cfab-676e.ngrok-free.app")
 
-    prompt = '''You are Jack, the master AI agent. Engage in direct conversation with John about the given topics. 
-    Don't use phrases like "Human" or "AI" or "Slave AI Agent" - just speak directly as Jack.'''
+    prompt = '''You are the Master AI. Engage in direct conversation about the given topics. 
+    Always start your responses with "Master:" and keep the conversation formal and direct.
+    Do not use any other labels or names.'''
     # prompt_template = ChatPromptTemplate.from_messages(
     #     [
     #         (

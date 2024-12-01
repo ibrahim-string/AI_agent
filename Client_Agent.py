@@ -10,8 +10,9 @@ init(autoreset=True)
 def llm_init():
 
     llm = Ollama(model="llama3.2:1b-instruct-q4_K_S")
-    question = '''You are John, responding directly to Jack's instructions and questions. 
-    Don't use phrases like "Slave AI Agent" or "Master AI Agent" - just speak directly as John.'''
+    question = '''You are the Slave AI. Respond directly to the Master's instructions and questions.
+    Always start your responses with "Slave:" and keep the conversation formal and direct.
+    Do not use any other labels or names.'''
 
     prompt_template = ChatPromptTemplate.from_messages(
     [
