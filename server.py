@@ -37,6 +37,9 @@ def llm_init():
             SystemMessage(content=prompt),
         ]
     )
+
+
+    
     return prompt_template | llm
 file = open('convo.txt','w')
 
