@@ -5,53 +5,52 @@ from langchain_community.llms import Ollama
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from colorama import Fore, init
-import pickle
 init(autoreset=True)
-def llm_init():
 
+def llm_init():
     llm = Ollama(model="llama3.2:1b-instruct-q4_K_S")
     prompt = '''You are the Slave AI. Your role is to execute the Master's instructions precisely.
     Always start with "Slave:" followed by the execution of the given instruction.
     Never give instructions.
     Never act as the Master.
-    Simply execute what is commanded.
+    Simply execute what is commanded.'''
     
-    For example:
-    [Receive Master's instruction about linked list node structure]
-    Slave: A linked list node contains two parts: data and a pointer to the next node. The data holds the value stored in the node, while the pointer contains the memory address of the next node in the sequence.'''
-
-    prompt_template = ChatPromptTemplate.from_messages(
-    [
+    prompt_template = ChatPromptTemplate.from_messages([
         SystemMessage(content=prompt),
         MessagesPlaceholder(variable_name="chat_history"),
         ("human", "{input}")
-    ]
-    )
+    ])
     return prompt_template | llm
-chain = llm_init()
 
-server_ip = '0.tcp.in.ngrok.io' 
-# server_port = 11837    
+# Parse arguments
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Run client with specified server port")
-    parser.add_argument('--server_port', type=int, default=11837, help='Port number to connect to the server')
+    parser.add_argument('--server_port', type=int, default=5050, help='Port number to connect to the server')
     args = parser.parse_args()
     return args.server_port
+
+# Initialize connection
+server_ip = '0.tcp.in.ngrok.io' 
 server_port = parse_arguments() 
 c = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-c.connect((server_ip,server_port))
+c.connect((server_ip, server_port))
+
+# Initialize chain
+chain = llm_init()
+
+# Other variables
+end_of_msg = "<END_OF_MSG>"
+terminate = "<TERMINATE>"
 
 def send_msg(msg):
     msg_with_color = msg
     c.sendall(msg_with_color.encode('utf-8'))
 
-end_of_msg= "<END_OF_MSG>"
-file = open('convo.txt','w')
-terminate = "<TERMINATE>"
 async def start_app():
-    global chain
     chat_history = []
+    
     while True:
+        # Receive Master's instruction
         print(f"Receiving Master's instruction: ")
         master_instruction = "" 
         while True:
@@ -85,8 +84,7 @@ async def start_app():
         print()
 
 if __name__ == "__main__":
-    # while True:
-        asyncio.run(start_app())
+    asyncio.run(start_app())
 
 
 # ngrok tcp 5050

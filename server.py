@@ -8,6 +8,23 @@ import time
 import pickle
 init(autoreset=True)
 
+def llm_init():
+    llm = Ollama(model="llama3.2:1b-instruct-q4_K_S")
+    prompt = '''You are the Master AI. Your role is to give clear, direct instructions to the Slave AI about the given topics. 
+    Always start with "Master:" followed by a specific instruction or task.
+    Stay focused on the current topic only.
+    Give step-by-step instructions related to the topic.
+    Do not respond as the Slave.
+    Do not ask questions - only give instructions.'''
+    
+    prompt_template = ChatPromptTemplate.from_messages([
+        SystemMessage(content=prompt),
+        MessagesPlaceholder(variable_name="chat_history"),
+        ("human", "{input}")
+    ])
+    return prompt_template | llm
+
+# Initialize socket
 s = socket.socket()
 s.bind(('0.0.0.0', 5050))  
 print("Socket created")
@@ -16,40 +33,15 @@ print("Waiting for connections...")
 
 c, addr = s.accept()
 print(f"Connected with {addr}")
-# --------------------------------------------------------------
-def llm_init():
-    llm = Ollama(model="llama3.2:1b-instruct-q4_K_S")
-    prompt = '''You are the Master AI. Your role is to give clear, direct instructions to the Slave AI about the given topics. 
-    Always start with "Master:" followed by a specific instruction or task.
-    Stay focused on the current topic only.
-    Give step-by-step instructions related to the topic.
-    Do not respond as the Slave.
-    Do not ask questions - only give instructions.
-    
-    For example:
-    Master: Explain the basic structure of a linked list node.
-    [Wait for Slave response]
-    Master: Now implement the node structure in C code.
-    [Wait for Slave response]
-    Master: Add a function to create a new node.'''
-    
-    prompt_template = ChatPromptTemplate.from_messages([
-        SystemMessage(content=prompt),
-        MessagesPlaceholder(variable_name="chat_history"),
-        ("human", "{input}")
-    ])
-    return prompt_template | llm
-file = open('convo.txt','w')
 
-with open("topics.pkl", "rb") as file:
-    loaded_topics = pickle.load(file)
-def send_msg(msg):
-    msg_with_color = msg
-    c.sendall(msg_with_color.encode('utf-8'))
-end_of_msg= "<END_OF_MSG>"
+# Initialize chain
+chain = llm_init()
+
+# Other variables
+end_of_msg = "<END_OF_MSG>"
 terminate = "<TERMINATE>"
+
 async def start_app():
-    global chain
     chat_history = []
     
     while True:
@@ -83,5 +75,4 @@ async def start_app():
         print()
 
 if __name__ == "__main__":
-    # while True:
-        asyncio.run(start_app())
+    asyncio.run(start_app())
