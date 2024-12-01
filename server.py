@@ -66,27 +66,24 @@ async def start_app():
 
             response_stream = chain.astream({"input": question, "chat_history": chat_history})
             chat_history.append(HumanMessage(content=question))
-
-                    response_text = ""
-                    async for response in response_stream:
-                        print(Fore.RED + response, end='',flush=True)
-                        send_msg(msg=response)
-                        response_text += response
-                    send_msg(end_of_msg)
-                    print()  
-                    chat_history.append(SystemMessage(content=response_text))
-                else: 
-                    # data = c.recv(1024).decode()
-                    print(f"AI agent llm: ")
-                    agent_response = "" 
-                    while True: 
-                        # print("*",end='')
-                        chunk = c.recv(1024).decode()
-                        agent_response+=chunk
-                        if end_of_msg in agent_response:
-                            agent_response=agent_response.replace(end_of_msg,'')
-                            break
-                        print(Fore.BLUE + chunk,end='',flush=True)
+            response_text = ""
+            async for response in response_stream:
+                print(Fore.RED + response, end='',flush=True)
+                send_msg(msg=response)
+                response_text += response
+                send_msg(end_of_msg)
+                print()
+                chat_history.append(SystemMessage(content=response_text))
+                print(f"AI agent llm: ")
+                agent_response = ""
+                while True:
+                    # print("*",end='')
+                    chunk = c.recv(1024).decode()
+                    agent_response += chunk
+                    print(Fore.BLUE + chunk, end='', flush=True)
+                    if end_of_msg in agent_response:
+                        agent_response = agent_response.replace(end_of_msg, '')
+                        break
 
                     print()
                     print('-------------------------------------------------')
