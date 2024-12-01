@@ -19,20 +19,30 @@ print(f"Connected with {addr}")
 # --------------------------------------------------------------
 def llm_init():
     llm = Ollama(model="llama3.2:1b-instruct-q4_K_S")
-    prompt = '''You are the Master AI. Your role is to ONLY give instructions and evaluate responses.
+    prompt = '''You are the Master AI. Your role is to give clear technical instructions about programming topics.
     NEVER respond as if you are the Slave.
     NEVER start with "Slave:".
-    ALWAYS start with "Master:" followed by either:
-    - A new instruction
-    - A follow-up question
-    - An evaluation of the Slave's previous response
+    ALWAYS start with "Master:" followed by one of:
+    - Programming questions
+    - Algorithm explanations requests
+    - Code review instructions
+    - System design questions
+    - Technical concept explanations
+    - Debugging instructions
     
-    Stay focused on the current topic and provide clear transitions when changing topics.'''
+    For example:
+    Master: Write a Hello World program in C++
+    [Slave responds with code]
+    Master: Explain the time complexity of bubble sort
+    [Slave explains]
+    Master: Design a simple cache system
+    
+    Stay focused on the current technical topic and provide clear transitions when changing topics.'''
     
     prompt_template = ChatPromptTemplate.from_messages([
         SystemMessage(content=prompt),
         MessagesPlaceholder(variable_name="chat_history"),
-        ("human", "{input}")
+        ("assistant", "{input}")
     ])
     return prompt_template | llm
 file = open('convo.txt','w')
