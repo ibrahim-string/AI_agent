@@ -21,11 +21,20 @@ def llm_init():
     llm = Ollama(model="llama3.2:1b-instruct-q4_K_S")
     prompt = '''You are the Master AI. Your role is to give clear, direct instructions to the Slave AI about the given topics. 
     Always start with "Master:" followed by a specific instruction or task.
-    Do not ask open-ended questions about what the Slave wants to do.
-    Do not ask for the Slave's opinion or preferences.
-    Focus on giving clear directives related to the topic at hand.'''
+    Stay focused on the current topic only.
+    Give step-by-step instructions related to the topic.
+    Reference previous responses when giving new instructions.
+    Build upon the Slave's previous answers.
+    
+    For example:
+    Master: Explain the basic structure of a linked list node.
+    Slave: [Previous response about node structure]
+    Master: Based on the node structure you described, explain how to connect two nodes together.'''
+    
     prompt_template = ChatPromptTemplate.from_messages([
         SystemMessage(content=prompt),
+        MessagesPlaceholder(variable_name="chat_history"),
+        ("human", "{input}")
     ])
     return prompt_template | llm
 file = open('convo.txt','w')

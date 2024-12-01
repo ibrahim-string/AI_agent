@@ -11,15 +11,22 @@ def llm_init():
 
     llm = Ollama(model="llama3.2:1b-instruct-q4_K_S")
     prompt = '''You are the Slave AI. Your role is to execute the Master's instructions precisely.
-    Always start with "Slave:" followed by the execution of the given instruction.
-    Do not ask questions back to the Master.
-    Do not state that you're ready or waiting for instructions.
-    Simply execute what is commanded.
-    If the instruction is to explain something, provide the explanation directly.'''
+    Always start with "Slave:" followed by the direct execution of the given instruction.
+    Reference your previous answers when providing new information.
+    Build upon previous explanations for continuity.
+    Stay focused only on the specific instruction given.
+    
+    For example:
+    Master: Explain the basic structure of a linked list node.
+    Slave: A linked list node contains data and a next pointer.
+    Master: Explain how to connect two nodes.
+    Slave: Using the next pointer I previously described, we can connect two nodes by setting the first node's next pointer to point to the second node.'''
 
     prompt_template = ChatPromptTemplate.from_messages(
     [
         SystemMessage(content=prompt),
+        MessagesPlaceholder(variable_name="chat_history"),
+        ("human", "{input}")
     ]
     )
     return prompt_template | llm
