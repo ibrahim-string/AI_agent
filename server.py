@@ -19,26 +19,14 @@ print(f"Connected with {addr}")
 # --------------------------------------------------------------
 def llm_init():
     llm = Ollama(model="llama3.2:1b-instruct-q4_K_S")
-    # llm = Ollama(model="llama3", endpoint="https://6cac-2406-7400-51-1e22-88f4-684f-cfab-676e.ngrok-free.app")
-
-    prompt = '''You are the Master AI. Engage in direct conversation about the given topics. 
-    Always start your responses with "Master:" and keep the conversation formal and direct.
-    Do not use any other labels or names.'''
-    # prompt_template = ChatPromptTemplate.from_messages(
-    #     [
-    #         (
-    #             "system",
-    #             prompt,
-    #         ),
-    #         MessagesPlaceholder(variable_name="chat_history"),
-    #         # ("Master", "{input}"),
-    #     ]
-    # )
-    prompt_template = ChatPromptTemplate.from_messages(
-        [
-            SystemMessage(content=prompt),
-        ]
-    )
+    prompt = '''You are the Master AI. Your role is to give clear, direct instructions to the Slave AI about the given topics. 
+    Always start with "Master:" followed by a specific instruction or task.
+    Do not ask open-ended questions about what the Slave wants to do.
+    Do not ask for the Slave's opinion or preferences.
+    Focus on giving clear directives related to the topic at hand.'''
+    prompt_template = ChatPromptTemplate.from_messages([
+        SystemMessage(content=prompt),
+    ])
     return prompt_template | llm
 file = open('convo.txt','w')
 
@@ -115,14 +103,32 @@ async def start_app():
                     print()  
                     chat_history.append(HumanMessage(content=response_text))
                 count= count+ 1
-                if time.time() - start_time > 180:
-                    # c.close()
+                if count >= 3:  # You can adjust this number
+                    # Send concluding instruction
+                    conclusion_prompt = '''Master: Provide a final conclusion about our discussion on this topic. This will end our current conversation.'''
+                    
+                    response_stream = chain.astream({"input": conclusion_prompt, "chat_history": chat_history})
+                    response_text = ""
+                    async for response in response_stream:
+                        print(Fore.RED + response, end='', flush=True)
+                        send_msg(msg=response)
+                        response_text += response
+                    send_msg(end_of_msg)
+                    
+                    # Send termination signal
                     send_msg(msg=terminate)
-                    print(Fore.YELLOW + "Time exceeded 60 seconds reinitializing llm...")
+                    print(Fore.YELLOW + "\nConversation concluded. Moving to next topic...")
+                    chain = llm_init()
+                    chat_history = []
+                    break
+                
+                # Your existing time-based termination
+                if time.time() - start_time > 60:
+                    send_msg(msg=terminate)
+                    print(Fore.YELLOW + "Time exceeded 180 seconds, reinitializing llm...")
                     chain = llm_init()
                     chat_history = []
                     start_time = time.time()
-                    
                     break
 
 if __name__ == "__main__":

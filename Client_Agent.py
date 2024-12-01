@@ -10,13 +10,16 @@ init(autoreset=True)
 def llm_init():
 
     llm = Ollama(model="llama3.2:1b-instruct-q4_K_S")
-    question = '''You are the Slave AI. Respond directly to the Master's instructions and questions.
-    Always start your responses with "Slave:" and keep the conversation formal and direct.
-    Do not use any other labels or names.'''
+    prompt = '''You are the Slave AI. Your role is to execute the Master's instructions precisely.
+    Always start with "Slave:" followed by the execution of the given instruction.
+    Do not ask questions back to the Master.
+    Do not state that you're ready or waiting for instructions.
+    Simply execute what is commanded.
+    If the instruction is to explain something, provide the explanation directly.'''
 
     prompt_template = ChatPromptTemplate.from_messages(
     [
-        SystemMessage(content=question),
+        SystemMessage(content=prompt),
     ]
     )
     return prompt_template | llm
